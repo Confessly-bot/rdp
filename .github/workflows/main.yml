@@ -20,11 +20,14 @@ jobs:
 
     - name: Enable Remote Desktop
       run: |
-        # Allow RDP
+        # Enable RDP
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-        
-        # Enable firewall rules
+
+        # Enable Windows Firewall for RDP
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
         # Set runner password
-        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainTe
+        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+
+    - name: Start Ngrok Tunnel
+      run: .\ngrok\ngrok.exe tcp 3389
