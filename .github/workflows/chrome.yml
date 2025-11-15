@@ -1,33 +1,32 @@
-name: Windows-RDP
-on:
-  workflow_dispatch:
+name: Windows-CRD
+on: workflow_dispatch
 
 jobs:
-  build:
+  crd:
     runs-on: windows-latest
 
+    env:
+      CRD_AUTH_CODE: ${{ secrets.CRD_AUTH_CODE }}
+      CRD_PIN: ${{ secrets.CRD_PIN }}
+
     steps:
-      - name: Enable RDP + Create User
+      - name: Install Chrome
         run: |
-          net user runneradmin /active:yes
-          net user rdpuser "Password123!" /add
-          net localgroup administrators rdpuser /add
+          curl -o chrome_installer.exe https://dl.google.com/chrome/install/latest/chrome_installer.exe
+          start /wait chrome_installer.exe /silent /install
 
-          reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
-          reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /t REG_DWORD /d 0 /f
-
-          netsh advfirewall firewall set rule group="remote desktop" new enable=Yes
-
-      - name: Show RDP Login
+      - name: Install Chrome Remote Desktop Host
         run: |
-          hostname
-          echo "=========================="
-          echo "RDP Enabled Successfully!"
-          echo "Username: rdpuser"
-          echo "Password: Password123!"
-          echo "Copy your IP from below:"
-          ipconfig
+          curl -o crdhost.msi https://dl.google.com/chrome-remote-desktop/chrome-remote-desktop_current_amd64.msi
+          msiexec /i crdhost.msi /quiet
 
-      - name: Keep Session Alive
+      - name: Register Chrome Remote Desktop
         run: |
-          ping -n 999999 127.0.0.1 > nul
+          "C:\Program Files\Google\Chrome Remote Desktop\remoting_start_host.exe" ^
+            --code="${env:CRD_AUTH_CODE}" ^
+            --redirect-url="https://remotedesktop.google.com/_/oauthredirect" ^
+            --name="GITHUB-WIN" ^
+            --pin="${env:CRD_PIN}"
+
+      - name: Keep Alive
+        run: ping -t 127.0.0.1
