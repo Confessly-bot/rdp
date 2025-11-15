@@ -13,14 +13,14 @@ jobs:
       - name: Install Chrome Remote Desktop Host
         shell: powershell
         run: |
-          Write-Host "Downloading Chrome Remote Desktop Host..."
+          Write-Host "Downloading CRD Host..."
           Invoke-WebRequest `
-            -Uri "https://dl.google.com/chrome-remote-desktop/chrome-remote-desktop_current_amd64.msi" `
+            -Uri "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi" `
             -OutFile "chrome-remote-desktop-host.msi" `
             -UseBasicParsing
 
           Write-Host "Installing CRD Host..."
-          Start-Process "msiexec.exe" -ArgumentList "/i chrome-remote-desktop-host.msi /qn" -Wait
+          Start-Process "msiexec.exe" -ArgumentList "/i chrome-remote-desktop-host.msi /qn /norestart" -Wait
 
       - name: Start Chrome Remote Desktop Host
         shell: powershell
