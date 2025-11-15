@@ -15,7 +15,7 @@ jobs:
         run: |
           Write-Host "Downloading Chrome..."
           Invoke-WebRequest `
-            -Uri "https://dl.google.com/tag/s/appguid%3D%7B8A69D345-D564-463C-AFF1-A69D9E530F96%7D&brand=GCEU&platform=win&installdataindex=default/chrome/install/GoogleChromeStandaloneEnterprise64.msi" `
+            -Uri "https://dl.google.com/chrome/install/GoogleChromeStandaloneEnterprise64.msi" `
             -OutFile "GoogleChromeStandaloneEnterprise64.msi"
 
           Write-Host "Installing Chrome..."
@@ -26,7 +26,7 @@ jobs:
         run: |
           Write-Host "Downloading CRD Host..."
           Invoke-WebRequest `
-            -Uri "https://dl.google.com/tag/s/appguid%3D%7B4F799C5F-5C0C-4B82-BC3F-8AC51BB3B1D4%7D&brand=GCEU&platform=win&installdataindex=default/chrome-remote-desktop-host.msi" `
+            -Uri "https://dl.google.com/chrome-remote-desktop/chrome-remote-desktop_current_amd64.msi" `
             -OutFile "chrome-remote-desktop-host.msi"
 
           Write-Host "Installing CRD Host..."
