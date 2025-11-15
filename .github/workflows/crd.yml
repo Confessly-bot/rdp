@@ -10,24 +10,14 @@ jobs:
       CRD_PIN: ${{ secrets.CRD_PIN }}
 
     steps:
-      - name: Install Google Chrome
-        shell: powershell
-        run: |
-          Write-Host "Downloading Chrome..."
-          Invoke-WebRequest `
-            -Uri "https://dl.google.com/chrome/install/GoogleChromeStandaloneEnterprise64.msi" `
-            -OutFile "GoogleChromeStandaloneEnterprise64.msi"
-
-          Write-Host "Installing Chrome..."
-          Start-Process "msiexec.exe" -ArgumentList "/i GoogleChromeStandaloneEnterprise64.msi /qn" -Wait
-
       - name: Install Chrome Remote Desktop Host
         shell: powershell
         run: |
-          Write-Host "Downloading CRD Host..."
+          Write-Host "Downloading Chrome Remote Desktop Host..."
           Invoke-WebRequest `
             -Uri "https://dl.google.com/chrome-remote-desktop/chrome-remote-desktop_current_amd64.msi" `
-            -OutFile "chrome-remote-desktop-host.msi"
+            -OutFile "chrome-remote-desktop-host.msi" `
+            -UseBasicParsing
 
           Write-Host "Installing CRD Host..."
           Start-Process "msiexec.exe" -ArgumentList "/i chrome-remote-desktop-host.msi /qn" -Wait
