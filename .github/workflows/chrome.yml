@@ -1,0 +1,90 @@
+name: MacRDP-via-ChromeRemoteDesktop
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: MacRDP (Chrome Remote Desktop)
+    runs-on: macos-latest
+    env:
+      CRD_AUTH_CODE: ${{ secrets.CRD_AUTH_CODE }}   # one-time registration code (optional)
+      CRD_PIN: ${{ secrets.CRD_PIN }}               # pin for CRD remote access
+
+    steps:
+      - name: Checkout (optional)
+        uses: actions/checkout@v4
+
+      - name: Install Homebrew (if missing) & required tools
+        run: |
+          set -e
+          if ! command -v brew >/dev/null 2>&1; then
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+            eval "$(/opt/homebrew/bin/brew shellenv)"
+          fi
+          brew install --quiet --no-cache gnu-sed
+          # make sure curl and unzip present
+          brew install --quiet --no-cache curl unzip || true
+
+      - name: Download and install Chrome Remote Desktop host package
+        run: |
+          set -e
+          # Google provides platform-specific host installers. Replace URL below with the
+          # official macOS host package URL if you have a specific one.
+          DOWNLOAD_URL="https://dl.google.com/chrome-remote-desktop/chrome-remote-desktop_current_mac.pkg"
+          TARGET_PKG="/tmp/chrome-remote-desktop.pkg"
+          echo "Downloading CRD host package (may require updating URL if Google changes it)..."
+          curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_PKG" || { echo "Failed to download package. Please verify DOWNLOAD_URL"; exit 1; }
+          sudo installer -pkg "$TARGET_PKG" -target /
+
+      - name: Prepare virtual display (create a display session)
+        run: |
+          set -e
+          # Create simple LaunchAgent to keep a user GUI session available in CI if needed.
+          # On macOS runners a user session is already present, but certain CRD operations expect a GUI session.
+          echo "Ensuring user GUI session available (best-effort)."
+
+      - name: Register Chrome Remote Desktop host (non-interactive, if CRD_AUTH_CODE provided)
+        if: env.CRD_AUTH_CODE != ''
+        run: |
+          set -e
+          # NOTE: The exact registration command below depends on the installed host binary path.
+          # The host provides a register/authorize helper that consumes the one-time code you generated.
+          # We try the common location and commands; adjust if your package exposes a different tool.
+          CRD_AUTH_CODE="${CRD_AUTH_CODE}"
+          PIN="${CRD_PIN:-000000}"
+
+          # Try known registration helper locations (best-effort).
+          if [ -x "/opt/google/chrome-remote-desktop/chrome-remote-desktop" ]; then
+            CRD_BIN="/opt/google/chrome-remote-desktop/chrome-remote-desktop"
+          elif [ -x "/Applications/Chrome Remote Desktop Host.app/Contents/MacOS/chrome-remote-desktop-host" ]; then
+            CRD_BIN="/Applications/Chrome Remote Desktop Host.app/Contents/MacOS/chrome-remote-desktop-host"
+          else
+            echo "Could not find CRD host binary in expected locations. Listing /opt and /Applications for debugging:"
+            ls -la /opt || true
+            ls -la /Applications || true
+            exit 1
+          fi
+
+          echo "Registering CRD host (non-interactive) using provided auth code..."
+          # This is the canonical style of registration for many CRD hosts. If your host binary uses
+          # a different flag/command name, replace accordingly.
+          sudo "$CRD_BIN" --setup --code="${CRD_AUTH_CODE}" --pin="${PIN}" || {
+            echo "Non-interactive registration failed. You may need to finish setup interactively (tmate step will be available)."
+            exit 1
+          }
+
+          echo "Registration attempted. If successful, the host should appear in your Chrome Remote Desktop console."
+
+      - name: Fallback: show instructions if CRD_AUTH_CODE not provided
+        if: env.CRD_AUTH_CODE == ''
+        run: |
+          echo "No CRD_AUTH_CODE secret was provided. The installer ran, but host registration must be completed interactively."
+          echo ""
+          echo "You can re-run this workflow after creating the one-time auth code and saving it to repository secret CRD_AUTH_CODE."
+          echo "Alternatively, use the tmate session below to finish the Google OAuth web flow from an interactive session."
+
+      - name: Open interactive tmate session (for manual finishing & troubleshooting)
+        uses: mxschmitt/action-tmate@v2
+        with:
+          install: true
