@@ -1,63 +1,33 @@
-name: MacRDP-via-ChromeRemoteDesktop
+name: Windows-RDP
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    name: MacRDP (Chrome Remote Desktop)
-    runs-on: macos-latest
-    env:
-      CRD_AUTH_CODE: ${{ secrets.CRD_AUTH_CODE }}
-      CRD_PIN: ${{ secrets.CRD_PIN }}
+    runs-on: windows-latest
 
     steps:
-      - name: Install Homebrew and tools
+      - name: Enable RDP + Create User
         run: |
-          set -e
-          if ! command -v brew >/dev/null 2>&1; then
-            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-            eval "$(/opt/homebrew/bin/brew shellenv)"
-          fi
-          brew install --quiet --no-cache curl unzip || true
+          net user runneradmin /active:yes
+          net user rdpuser "Password123!" /add
+          net localgroup administrators rdpuser /add
 
-      - name: Download Chrome Remote Desktop host
+          reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+          reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /t REG_DWORD /d 0 /f
+
+          netsh advfirewall firewall set rule group="remote desktop" new enable=Yes
+
+      - name: Show RDP Login
         run: |
-          set -e
-          DOWNLOAD_URL="https://dl.google.com/chrome-remote-desktop/chrome-remote-desktop_current_mac.pkg"
-          TARGET_PKG="/tmp/chrome-remote-desktop.pkg"
-          curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_PKG"
-          sudo installer -pkg "$TARGET_PKG" -target /
+          hostname
+          echo "=========================="
+          echo "RDP Enabled Successfully!"
+          echo "Username: rdpuser"
+          echo "Password: Password123!"
+          echo "Copy your IP from below:"
+          ipconfig
 
-      - name: Locate CRD host binary
-        id: locate
+      - name: Keep Session Alive
         run: |
-          if [ -x "/opt/google/chrome-remote-desktop/chrome-remote-desktop" ]; then
-            echo "path=/opt/google/chrome-remote-desktop/chrome-remote-desktop" >> $GITHUB_OUTPUT
-          elif [ -x "/Applications/Chrome Remote Desktop Host.app/Contents/MacOS/chrome-remote-desktop-host" ]; then
-            echo "path=/Applications/Chrome Remote Desktop Host.app/Contents/MacOS/chrome-remote-desktop-host" >> $GITHUB_OUTPUT
-          else
-            echo "CRD host not found."
-            exit 1
-          fi
-
-      - name: Register Chrome Remote Desktop (non-interactive)
-        if: env.CRD_AUTH_CODE != ''
-        run: |
-          set -e
-          CRD_BIN="${{ steps.locate.outputs.path }}"
-          PIN="${CRD_PIN:-000000}"
-
-          sudo "$CRD_BIN" \
-            --setup \
-            --code="$CRD_AUTH_CODE" \
-            --pin="$PIN" || echo "Non-interactive registration failed."
-
-      - name: Missing AUTH code message
-        if: env.CRD_AUTH_CODE == ''
-        run: |
-          echo "No CRD_AUTH_CODE secret provided."
-          echo "You must generate a Chrome Remote Desktop registration code and add it as a GitHub secret."
-
-      - name: Open tmate session (manual setup/debug)
-        uses: mxschmitt/action-tmate@v2
+          ping -n 999999 127.0.0.1 > nul
