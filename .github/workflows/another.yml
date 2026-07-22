@@ -15,7 +15,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
-          gh workflow run main.yml
+          gh workflow run main.yml \
+          --repo aayush-ojha1/rdp
           
   next-job:
     needs: launch-all
